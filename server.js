@@ -23,29 +23,42 @@ dotenv.config({ path: "./.env" });
 const app = express();
 
 /* ---------------------------------------------------
-   🔥 iPHONE SAFARI CORS FIX (CRITICAL)
+   ⭐ FULL CORS FIX — WORKS ON SAFARI, iPHONE & VERCEL
 --------------------------------------------------- */
 app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://health-app-updated.vercel.app");
   res.header("Access-Control-Allow-Credentials", "true");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+  );
+
+  // Must respond to OPTIONS for Safari + Vercel preflight
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
   next();
 });
 
 /* ---------------------------------------------------
-   🔥 MAIN CORS CONFIG — Only 2 origins allowed
+   ⭐ Backup CORS Middleware
 --------------------------------------------------- */
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
       "https://health-app-updated.vercel.app",
+      "http://localhost:5173"
     ],
     credentials: true,
   })
 );
 
-// Preflight requests
 app.options("*", cors());
-
 app.use(express.json());
 
 /* ---------------------------------------------------
@@ -62,9 +75,7 @@ mongoose
     useUnifiedTopology: true,
   })
   .then(() => console.log("✅ MongoDB Connected Successfully"))
-  .catch((error) =>
-    console.log("❌ MongoDB Connection Error:", error.message)
-  );
+  .catch(error => console.log("❌ MongoDB Connection Error:", error.message));
 
 /* ---------------------------------------------------
    🔥 Firebase Admin Setup
@@ -80,9 +91,7 @@ mongoose
         : path.resolve("./firebase-service-account.json");
 
     if (fs.existsSync(keyPath)) {
-      const serviceAccount = JSON.parse(
-        fs.readFileSync(keyPath, "utf-8")
-      );
+      const serviceAccount = JSON.parse(fs.readFileSync(keyPath, "utf-8"));
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
@@ -103,7 +112,7 @@ app.get("/", (_req, res) => {
 });
 
 /* ---------------------------------------------------
-   📌 Routes
+   📌 API Routes
 --------------------------------------------------- */
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
