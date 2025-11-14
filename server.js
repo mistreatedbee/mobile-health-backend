@@ -7,7 +7,6 @@ import fs from "fs";
 import path from "path";
 import admin from "firebase-admin";
 
-
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import appointmentRoutes from "./routes/appointments.js";
@@ -24,11 +23,14 @@ dotenv.config({ path: "./.env" });
 const app = express();
 
 /* ---------------------------------------------------
-   ✅ CORS FIX — ALLOW React Web App Access
+   ✅ CORS FIX — Allow Localhost + Vercel Frontend
 --------------------------------------------------- */
 app.use(
   cors({
-    origin: "http://localhost:5173", // Your React frontend
+    origin: [
+      "http://localhost:5173",
+      "https://<YOUR-VERCEL-DOMAIN>.vercel.app"
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -54,7 +56,9 @@ mongoose
     useUnifiedTopology: true,
   })
   .then(() => console.log("✅ MongoDB Connected Successfully"))
-  .catch((error) => console.log("❌ MongoDB Connection Error:", error.message));
+  .catch((error) =>
+    console.log("❌ MongoDB Connection Error:", error.message)
+  );
 
 /* ---------------------------------------------------
    ✅ Firebase Admin Setup (FCM Notifications)
@@ -62,6 +66,7 @@ mongoose
 (function initFirebaseAdmin() {
   try {
     if (admin.apps.length) return;
+
     const keyPath =
       process.env.GOOGLE_APPLICATION_CREDENTIALS &&
       fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)
@@ -69,13 +74,17 @@ mongoose
         : path.resolve("./firebase-service-account.json");
 
     if (fs.existsSync(keyPath)) {
-      const serviceAccount = JSON.parse(fs.readFileSync(keyPath, "utf-8"));
+      const serviceAccount = JSON.parse(
+        fs.readFileSync(keyPath, "utf-8")
+      );
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
       console.log("✅ Firebase Admin initialized with service account");
     } else {
-      console.log("⚠️ Firebase Admin not initialized (service account not found)");
+      console.log(
+        "⚠️ Firebase Admin not initialized (service account not found)"
+      );
     }
   } catch (e) {
     console.log("⚠️ Firebase Admin init error:", e.message);
@@ -101,10 +110,10 @@ app.use("/patients", patientRoutes);
 app.use("/admin", adminRoutes);
 app.use("/push", pushRoutes);
 app.use("/notifications", notificationRoutes);
-app.use("/notes", notesRoutes); // ✅ Add this
+app.use("/notes", notesRoutes);
 
 /* ---------------------------------------------------
-   ✅ Start Server
+   ⭐ Start Server
 --------------------------------------------------- */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () =>
