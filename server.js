@@ -23,32 +23,38 @@ dotenv.config({ path: "./.env" });
 const app = express();
 
 /* ---------------------------------------------------
-   ✅ CORS FIX — Allow Localhost + Vercel Frontend
+   🔥 iPHONE SAFARI CORS FIX (CRITICAL)
+--------------------------------------------------- */
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
+
+/* ---------------------------------------------------
+   🔥 MAIN CORS CONFIG — Only 2 origins allowed
 --------------------------------------------------- */
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://health-app-updated.vercel.app"
+      "https://health-app-updated.vercel.app",
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// Handle preflight requests
+// Preflight requests
 app.options("*", cors());
 
 app.use(express.json());
 
 /* ---------------------------------------------------
-   ✅ Debug Log
+   🔍 Debug
 --------------------------------------------------- */
 console.log("🔍 MONGO_URI Loaded:", process.env.MONGO_URI ? "YES ✅" : "NO ❌");
 
 /* ---------------------------------------------------
-   ✅ MongoDB Connect
+   🔌 MongoDB Connection
 --------------------------------------------------- */
 mongoose
   .connect(process.env.MONGO_URI, {
@@ -61,7 +67,7 @@ mongoose
   );
 
 /* ---------------------------------------------------
-   ✅ Firebase Admin Setup (FCM Notifications)
+   🔥 Firebase Admin Setup
 --------------------------------------------------- */
 (function initFirebaseAdmin() {
   try {
@@ -82,9 +88,7 @@ mongoose
       });
       console.log("✅ Firebase Admin initialized with service account");
     } else {
-      console.log(
-        "⚠️ Firebase Admin not initialized (service account not found)"
-      );
+      console.log("⚠️ Firebase Admin not initialized (service account not found)");
     }
   } catch (e) {
     console.log("⚠️ Firebase Admin init error:", e.message);
@@ -92,14 +96,14 @@ mongoose
 })();
 
 /* ---------------------------------------------------
-   ✅ Test Route
+   🚀 Test Route
 --------------------------------------------------- */
 app.get("/", (_req, res) => {
   res.send("✅ Backend API is running correctly");
 });
 
 /* ---------------------------------------------------
-   ✅ Routes
+   📌 Routes
 --------------------------------------------------- */
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
