@@ -23,10 +23,25 @@ dotenv.config({ path: "./.env" });
 const app = express();
 
 /* ---------------------------------------------------
-   ⭐ FULL CORS FIX — WORKS ON SAFARI, iPHONE & VERCEL
+   ⭐ UNIVERSAL CORS FOR SAFARI + VERCEL + iPHONE
 --------------------------------------------------- */
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://health-app-updated.vercel.app");
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "https://health-app-updated.vercel.app",
+  ];
+
+  // Automatically allow ANY vercel preview domain
+  if (req.headers.origin?.includes("vercel.app")) {
+    allowedOrigins.push(req.headers.origin);
+  }
+
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+
   res.header("Access-Control-Allow-Credentials", "true");
   res.header(
     "Access-Control-Allow-Headers",
@@ -37,7 +52,7 @@ app.use((req, res, next) => {
     "GET, POST, PUT, PATCH, DELETE, OPTIONS"
   );
 
-  // Must respond to OPTIONS for Safari + Vercel preflight
+  // Safari & Vercel need this for preflight
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
@@ -46,19 +61,27 @@ app.use((req, res, next) => {
 });
 
 /* ---------------------------------------------------
-   ⭐ Backup CORS Middleware
+   ⭐ Backup CORS (important)
 --------------------------------------------------- */
 app.use(
   cors({
-    origin: [
-      "https://health-app-updated.vercel.app",
-      "http://localhost:5173"
-    ],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      if (
+        origin.includes("vercel.app") ||
+        origin === "http://localhost:5173" ||
+        origin === "https://health-app-updated.vercel.app"
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Blocked by CORS: " + origin));
+    },
     credentials: true,
   })
 );
 
-app.options("*", cors());
 app.use(express.json());
 
 /* ---------------------------------------------------
@@ -67,7 +90,7 @@ app.use(express.json());
 console.log("🔍 MONGO_URI Loaded:", process.env.MONGO_URI ? "YES ✅" : "NO ❌");
 
 /* ---------------------------------------------------
-   🔌 MongoDB Connection
+   🔌 MongoDB Connect
 --------------------------------------------------- */
 mongoose
   .connect(process.env.MONGO_URI, {
@@ -75,7 +98,9 @@ mongoose
     useUnifiedTopology: true,
   })
   .then(() => console.log("✅ MongoDB Connected Successfully"))
-  .catch(error => console.log("❌ MongoDB Connection Error:", error.message));
+  .catch((error) =>
+    console.log("❌ MongoDB Connection Error:", error.message)
+  );
 
 /* ---------------------------------------------------
    🔥 Firebase Admin Setup
@@ -91,13 +116,15 @@ mongoose
         : path.resolve("./firebase-service-account.json");
 
     if (fs.existsSync(keyPath)) {
-      const serviceAccount = JSON.parse(fs.readFileSync(keyPath, "utf-8"));
+      const serviceAccount = JSON.parse(
+        fs.readFileSync(keyPath, "utf-8")
+      );
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
-      console.log("✅ Firebase Admin initialized with service account");
+      console.log("✅ Firebase Admin initialized");
     } else {
-      console.log("⚠️ Firebase Admin not initialized (service account not found)");
+      console.log("⚠️ Firebase Admin not initialized");
     }
   } catch (e) {
     console.log("⚠️ Firebase Admin init error:", e.message);
